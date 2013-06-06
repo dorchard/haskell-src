@@ -18,10 +18,10 @@ module Language.Haskell.ParseMonad(
                 P, ParseResult(..), atSrcLoc, LexContext(..),
                 ParseMode(..), defaultParseMode,
                 runParserWithMode, runParser,
-                getSrcLoc, pushCurrentContext, popContext,
+                getSrcLoc, getCurrentPos, pushCurrentContext, popContext,
                 -- * Lexing
                 Lex(runL), getInput, discard, lexNewline, lexTab, lexWhile,
-                alternative, checkBOL, setBOL, startToken, getOffside,
+                alternative, checkBOL, setBOL, startToken, getSrcLocLex, getOffside,
                 pushContextL, popContextL
         ) where
 
@@ -124,6 +124,9 @@ P m `atSrcLoc` loc = P $ \i x y _l -> m i x y loc
 
 getSrcLoc :: P SrcLoc
 getSrcLoc = P $ \_i _x _y l s _m -> Ok s l
+
+getCurrentPos :: P (Int, Int)
+getCurrentPos = P $ \_i _x _y _l s _m -> Ok s (_x, _y)
 
 -- Enter a new layout context.  If we are already in a layout context,
 -- ensure that the new indent is greater than the indent of that context.
@@ -236,6 +239,11 @@ startToken = Lex $ \cont -> P $ \s x y _ stk mode ->
                 srcColumn = x
         } in
         runP (cont ()) s x y loc stk mode
+
+-- Get the current loc in the lexer 
+
+getSrcLocLex :: Lex a SrcLoc
+getSrcLocLex = Lex $ \cont -> P $ \s x y l stk mode -> runP (cont l) s x y l stk mode
 
 -- Current status with respect to the offside (layout) rule:
 -- LT: we are to the left of the current indent (if any)
